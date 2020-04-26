@@ -1,57 +1,69 @@
 pipeline{
-    tools{
-        jdk 'myjava'
-        maven 'mymaven'
-    }
-    
-    agent none
-    stages{
-            stage('Compile'){
-                agent any
-                steps{
-                    sh 'mvn compile'
-                }
-            }
-            stage('CodeReview'){
-                agent any
-                steps{
-                    sh 'mvn pmd:pmd'
-                }
-                post{
+     
+     tools{
+          jdk 'Default'
+          maven 'maven'
+     }
+         
+     agent none
+     stages{
+         stage('Checkout'){
+             agent any
+             steps{
+                 git 'https://github.com/devops-trainer/DevOpsClassCodes.git'
+             }
+         }
+          stage('Project-compile'){
+              agent any
+              steps{
+                  sh 'mvn compile'
+              }
+         } 
+          stage('Project-code review'){
+              agent any
+              steps{
+                  sh 'mvn pmd:pmd'
+              }
+              post{
                     always{
                         pmd pattern: 'target/pmd.xml'
                     }
-                }
-            }
-            stage('UnitTest'){
-                agent {label 'slave_win'}
-                steps{
-                    git 'https://github.com/devops-trainer/DevOpsClassCodes.git'
-                    bat 'mvn test'
-                }
-                post{
-                    always{
-                        junit 'target/surefire-reports/*.xml'
-                    }
-                }
+                    
+              }
+          
+          }
+           stage('Project Unit test'){
+               agent any
+               steps{
+                   sh 'mvn test'
                 
-            }
-            stage('MetricCheck'){
-                agent any
+               }
+               post{
+                   always{
+                       junit 'target/surefire-reports/*.xml'
+                   }
+               }
+               
+          }    
+           stage('Project-Matrixcheck'){
+               agent {label 'windows'}
+               steps{
+                   git 'https://github.com/devops-trainer/DevOpsClassCodes.git'
+                   bat 'mvn cobertura:cobertura -Dcobertura.report.format=xml'
+                   
+ 
+               }
+               post{
+                   always{
+                       cobertura coberturaReportFile: 'target/site/cobertura/coverage.xml'
+                   }
+               }
+           } 
+            stage('Project-packaging'){
+                agent {label 'windows'}
                 steps{
-                    sh 'mvn cobertura:cobertura -Dcobertura.report.format=xml'
-                }
-                post{
-                    always{
-                        cobertura coberturaReportFile: 'target/site/cobertura/coverage.xml'
-                    }
+                    bat 'mvn package'
                 }
             }
-            stage('Package'){
-                agent any
-                steps{
-                    sh 'mvn package'
-                }
-            }
-    }
-}
+     }
+ }
